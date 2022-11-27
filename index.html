@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<!--CREATED: 19.08.2022 UM 13:27-->
+<html>
+<head>
+	<?=globals.tmp_head("CHAT",input)?>
+	<!--<link rel=preload href=/files/fonts/Minecraft.otf type=font/otf as=font crossorigin>-->
+	<style>
+		@font-face{font-family:Minecraft;src:url("/files/fonts/Minecraft.otf")}
+		.msg{
+			text-align: left;
+			
+			margin-bottom: 10px;
+
+
+			border-top: 5px green solid;
+			border-bottom: 5px green solid;
+			border-left:3px red solid;
+			border-right:3px red solid;
+			border-radius: 10px;
+			padding-bottom: 10px;
+
+			width: 400px;
+			max-width: 400px;
+		}
+		.msg.me{
+			position: relative;
+			right: 10px;
+		}
+		.msg.other{
+			margin-right: 30%;
+		}
+	</style>
+</head>
+<body>
+<center>
+<div id="div_login" style="<?=input.loginSuccess=='1'?`display: none;`:''?>">
+	<form id="form_loginChat" action="/server/chat/checkUser.bridge" onsubmit="OnSubmit(this)">
+		<input type=hidden name=url value=/Chat>
+		<input type=hidden name=login value=1>
+		<input type=hidden name=account value="<?=input.account==undefined?'0':unESC(input.account)?>">
+		<input type=hidden name=goBack value=0>
+		<input type=hidden name=viewOnly value=0>
+		<input type=hidden name=dark value="<?=input.dark?>">
+		<input type=hidden name=token value="<?=input.token==undefined?'0':unESC(input.token)?>">
+		<input type=hidden name=deviceId value="<?=input.deviceId==undefined?'0':unESC(input.deviceId)?>">
+		<p>
+			<label>Benutzername: 
+				<input id=input_username required name=chatName maxlength=16 minlength=3 pattern="[a-zA-Z0-9_\-. ]+" value="<?=input.chatName==undefined||input.chatName=='null'?'':unESC(input.chatName)?>"> 
+			</label> 
+			<img style="cursor: help;" title="Für Info/Hilfe hier klicken" src=/files/img/info64.png height=20 align=top onclick="alert(`Der 'Benutzername' wird dazu verwendet um jemanden zu AT-den (@USERNAME). diser ist auserdem gefordert um sich anzumelden!\nAnfoderungen: mindestens 3 Zeichen, maximal 16 Zeichen!\n\nErlaubte Zeichen: a-z, A-Z, 0-9, _, ., -`)" alt=INFO/HILFE> 
+			<button style="cursor: pointer;" onclick="this.form.login.value='0'" class="styledBTNMint BTNCHECK">Prüfen</button>
+		</p>
+		<p>
+			<label>Anzeige-Name: 
+				<input id=input_name name=showName maxlength=16 minlength=3 pattern="[a-zA-Z0-9_\-. ]+" value="<?=input.showName==undefined||input.showName=='null'?'':unESC(input.showName)?>"> 
+			</label> 
+			<img style="cursor: help;" title="Für Info/Hilfe hier klicken" src=/files/img/info64.png height=20 align=top onclick="alert(`Der 'Anzeige-Name' wird den anderen schreibern angezeigt (der 'Benutzername' auch). WICHTIG: wenn der 'Anzeige-Name' nicht vorhanden ist wird nur der Benutzername angezeigt!\n\nAnfoderungen: mindestens 3 Zeichen (leerlassen geht auch), maximal 16 Zeichen!\nErlaubte Zeichen: a-z, A-Z, 0-9, _, ., -`)" alt=INFO/HILFE> 
+			<button style="cursor: pointer;" onclick="this.form.login.value='0'" class="styledBTNMint BTNCHECK">Prüfen</button>
+		</p>
+		<p>
+			<span>Token Länge: 
+				<code>
+					<script>
+							{
+								let chatLoginData=localStorage.getItem("chatLoginData")
+								if(chatLoginData==null){
+									doc.write("0")
+								}
+								else{
+									chatLoginData=JSON.parse(chatLoginData);
+									doc.write(String(chatLoginData.token).length)
+								}
+							}
+					</script>
+				</code>
+			</span>
+		</p>
+		<p>
+			<button class="styledBTNMint" onclick="this.form.login.value='1'">Betreten</button> 
+			<button class="styledBTNMint" onclick="UseLoginData(this);return(false)">Statdessen Anmelden</button></p>
+		<div name=div_allowed>
+			<?
+			if(input.allowed_chatName=="1"&&input.chatName!=undefined&&input.chatName!="null"){
+				?>
+				<p>
+					Benutzername <code class="green"><?=input.chatName?></code> verfügbar <img src=/files/img/checkSamsung.png height=16 align=top alt="checkbox checked">
+				</p>
+				<?
+			}else if(input.allowed_chatName=="0"&&input.chatName!=undefined&&input.chatName!="null"){
+				?>
+				<p>
+					Benutzername <code class="red"><?=input.chatName?></code> nicht verfügbar <input type="checkbox" onchange="this.checked=false;">
+				</p>
+				<?
+			}
+			if(input.allowed_showName=="1"&&input.showName!=undefined&&input.showName!=""&&input.showName!="null"){
+				?>
+				<p>
+					Anzeige-Name <code class="green"><?=input.showName?></code> verfügbar <img src=/files/img/checkSamsung.png height=16 align=top alt="checkbox checked">
+				</p>
+				<?
+			}else if(input.allowed_showName=="0"&&input.showName!=undefined&&input.showName!=""&&input.showName!="null"){
+				?>
+				<p>
+					Anzeige-Name <code class="orange"><?=input.showName?></code> wird bereitz verwendet <input type="checkbox" onchange="this.checked=false;">
+				</p>
+				<?
+			}
+			?>
+		</div>
+	</form>
+</div>
+<div id="div_selectRoom" style="<?=input.loginSuccess=='1'?'':`display: none;`?>">
+	<h1><span class="underLine">Willkommen</span> im <span class="green">Chat</span>!</h1>
+	<p>Hi<span class="underLine" title="HIER schreibt man mit 'E' ich habe es schon öfter ohne 'e' geschreiben (Hir) ABER DAS IST FALSCH!!!">e</span>r Sind Deine Chat Room's</p>
+	<p>
+		<script>
+			doc.write(`<button id="button_createRoom_showHide" <?=input.account=="1"?'onclick="CreateRoom(this,100)" class="styledBTNMint">Raum Erstellen':'disabled>Account Required!'?></button>`)
+		</script>
+	</p>
+	<div id="div_createRoom" class="niceBorder" style="display: none;max-width: 300px;">
+		<form onsubmit="if(this.roomName.validity.valid){CreateRoom(this,'startDownload')}else{con.log('wrong valid!')};con.log('OK ...');return(false);">
+			<p><label>Room Name*: <input style="max-width:100px;" name="roomName" autocomplete=off required pattern="[a-zA-Z0-9_\-. ]+"></label></p>
+			<p><label>Room Password: <input style="max-width:100px;" type="password" name="roomPassword"></label></p>
+			<p><button class="styledBTNMint">Erstellen</button></p>
+		</form>
+	</div>
+	<div id="div_showRooms"></div>
+</div>
+<div id="div_chatHistory" class="hidden" style="margin: 50px;">
+	<img src="/files/img/winXpCloseBTN64.png" class=topRight style="top:15px;" align=top height=32 />
+	<img src="/files/img/optionsMenuBlack.png" class=topLeft style="top:15px;" align=top height=32 />
+	<div style="text-align: left;">
+		Narichten: 
+		<div class="msg me">
+			<p style="margin:0;margin-left:5px;">
+				<b>LFF5644</b><br>
+				<i>17:30 10.10.2022</i>
+				<hr style="margin:none;border:none;background-color:red;padding:1px;">
+			</p>
+			<p style="margin:0;margin-left:1px;">
+				Hallo Welt<br>
+				du bist dumm
+			</p>
+		</div>
+	</div>
+	<form id="form_sendMSG" class=displayFLEX onsubmit="SendMSG(this);return(false);">
+		<input type=hidden name=use value=input>
+		<input type=hidden name=allowed value=0>
+		<input name=msg_input class=flex onkeydown="
+			const form=this.form;
+			if(event.keyCode==13&&event.shiftKey){
+				changeMSGMode('toTextarea');
+				return(false);
+			}else if(event.keyCode==13&&!event.shiftKey){
+				form.allowed.value='1';
+				form.onsubmit();
+				return(false);
+			}
+			" style="font-family: Minecraft">
+
+		<textarea name=msg_textarea onkeydown="
+			if(event.keyCode==13||event.keyCode==8){
+				setTimeout(function(element){
+					let br=element.value.split('\n').length
+					element.rows=br+1;
+				},10,this)
+
+			}
+
+		" class=hidden style="font-family: Minecraft;font-size: 1.1em;"></textarea>
+		<img height=32 src="/files/img/newLine.png" align=top onclick="changeMSGMode('toTextarea');this.className='hidden'" class="<?=input.mobil?'':'hidden'?>" name=img_newLine alt="Neue Zeile" >
+		<img height=32 class=cursorPOINTER src="/files/img/sendByAFF.png" onclick="
+			const form=GetId('form_sendMSG');
+			form.allowed.value='1';
+			form.onsubmit();
+		" style="transform:rotate(-9deg);" alt=Senden align=top>	
+	</form>
+</div>
+</center>
+<script>
+let searchDefined=false;
+let completeData=false;
+let changeToken=true;
+let logined=false;
+let elements_rooms=[];
+
+function UseLoginData(call){
+	const form=call.form;
+	const loginData=localStorage.getItem("loginData");
+
+	let userName=null;
+	let userToken=null;
+	if(loginData!=null){
+		userName= loginData.split("|")[0];
+		userToken=loginData.split("|")[1];
+	}
+
+	call.className='';
+	call.disabled=true;
+	call.style.cursor="not-allowed";
+	call.innerText=loginData==null?"Fehler: 'Keine Daten'":"OK";
+	call.title=loginData==null?"Bitte melden Sie sich zuerst auf der homepage an!":"OK Prüfen sie ihre daten.\nKlicken sie auf 'Betreten' um zu starten"
+	if(loginData==null){return}
+	form.chatName.value=userName
+	form.chatName.disabled=true;
+	form.token.value=userToken;
+	form.account.value="1";
+	form.login.value="1";
+	completeData=true;
+	changeToken=false;
+	for(btn of GetIdClass("BTNCHECK")){
+		btn.className="BTNCHECK";
+		btn.disabled=true;
+		btn.style.cursor="not-allowed";
+	}
+}
+function OnSubmit(f){
+	let form=f;
+	form.chatName.disabled=false;
+	form.chatName.value=ESC(form.chatName.value);
+	form.showName.value=ESC(form.showName.value);
+	if(localStorage.getItem("chatLoginData")!=null){
+		let chatLoginData=JSON.parse(localStorage.getItem("chatLoginData"));
+		
+		if(!form.chatName.disabled){
+			if(form.chatName.value=="0"){form.chatName.value=chatLoginData.username}
+			if(form.deviceId.value=="0"){form.deviceId.value=chatLoginData.deviceId}
+		}
+		if(completeData){
+			if(changeToken){form.token.value=chatLoginData.token}
+			form.account.value="1";
+		}else{
+			form.token.value="0";
+			form.account.value="0";
+		}
+	}
+	/*{//SHOW INFO'S
+		let values=["chatName","showName","account","token","deviceId","viewOnly",
+		"dark","goBack","login"]
+		alertText="";
+		for(v of values){
+			alertText+=`${v}: "${form[v].value}"\n`;
+		}
+		//alert(alertText)
+	}*/
+}
+function CheckSearch(){
+	let search=location.search.substr(1);
+	if(search==""){
+		con.log("no search!");
+		searchDefined=false;
+		return;
+	}
+	searchDefined=true;
+
+	let chatName=GetLine(search,"chatName",["=","&"]);
+	let showName=GetLine(search,"showName",["=","&"]);
+	let token=GetLine(search,"token",["=","&"]);
+	let error=GetLine(search,"error",["=","&"]);
+	let deviceId=GetLine(search,"deviceId",["=","&"]);
+	let loginSuccess=GetLine(search,"loginSuccess",["=","&"]);
+	let goBack=GetLine(search,"goBack",["=","&"]);
+	let chatRooms=GetLine(search,"chatRooms",["=","&"]);
+	let account=GetLine(search,"account",["=","&"]);
+
+	if(typeof(chatName)!="string"){chatName=decodeURLS(chatName[1])}else{chatName=null}
+	if(typeof(showName)!="string"){showName=decodeURLS(showName[1])}else{showName=null}
+	if(typeof(token)!="string"){token=decodeURLS(token[1])}else{token=null}
+	if(typeof(error)!="string"){error=decodeURLS(error[1])}else{error=null}
+	if(typeof(deviceId)!="string"){deviceId=decodeURLS(deviceId[1])}else{deviceId=null}
+	if(typeof(loginSuccess)!="string"){loginSuccess=decodeURLS(loginSuccess[1])}else{loginSuccess=null}
+	if(typeof(goBack)!="string"){goBack=decodeURLS(goBack[1])}else{goBack=null}
+	if(typeof(chatRooms)!="string"){chatRooms=unESC(chatRooms[1])}else{chatRooms=null}
+	if(typeof(account)!="string"){account=unESC(account[1])}else{account=null}
+
+	con.log("chatName: "+chatName)
+	con.log("showName: "+showName)
+	con.log("Token: "+token)
+	con.log("Error: "+error)
+	con.log("DeviceId: "+deviceId)
+	con.log("loginSuccess: "+loginSuccess)
+	con.log("chatRooms: "+chatRooms);
+	con.log("account: "+account);
+
+	if(error!=null){alert("Fehler Fom Server:\n"+error)}
+		if(error==null&&chatRooms!=null){
+			sessionStorage.setItem("chat_rooms",chatRooms);
+		}
+
+	if(chatName!=null&&token!=null&&deviceId!=null&&account!=null){
+		localStorage.setItem("chatLoginData",JSON.stringify(
+			{
+				"username":String(chatName),
+				"token":isNaN(Number(token))?String(token):Number(token),
+				"deviceId":String(deviceId)==Number(deviceId)?Number(deviceId):String(deviceId),
+				"isAccount":account=="1",
+			}));
+	}
+	ChangeURL(location.pathname);
+	if(loginSuccess=="1"){
+		logined=true;
+		location.hash="#rooms";
+		let form=GetId("form_loginChat");
+	}else if(loginSuccess=="0"||error!=null){
+		logined=false;
+		location.hash="#login"
+	}
+}
+function ReadLocalStorage(){
+	const form=GetId("form_loginChat");
+	if(form.account.value=="0"&&form.chatName.value==""){
+		let chatLoginData=localStorage.getItem("chatLoginData");
+		if(chatLoginData==null){
+			location.hash="#login";
+		}
+		else{
+			chatLoginData=JSON.parse(chatLoginData);
+			if(form.chatName.disabled==false){
+				form.chatName.value=chatLoginData.username;
+				form.token.value=chatLoginData.token;
+				form.deviceId.value=chatLoginData.deviceId;
+				form.account.value=chatLoginData.isAccount?"1":"0";
+
+				if(location.hash.substr(1).toLowerCase()=="rooms"&&logined==false){
+					form.viewOnly.value="1";
+					CreateProgressbar();
+					form.submit();
+				}
+			}
+		}
+	}
+	if(location.hash.substr(1).toLowerCase()=="rooms"&&sessionStorage.getItem("chat_rooms")!=null){
+		display_rooms();
+
+	}
+}
+function display_rooms(data=null){
+	let chat_rooms=null;
+	let logDes="[display_rooms]"
+	if(data==null){chat_rooms=sessionStorage.getItem("chat_rooms")};
+	if(chat_rooms!=null){chat_rooms=JSON.parse(chat_rooms)}
+	else{CleanLog(logDes,"Fehler sessionStorage.chat_rooms is 'null'!","[LoadData][ERROR]");return("NO ROOMS")}
+	
+	for(element of elements_rooms){element.remove();}
+	for(room of chat_rooms){
+		let element_p=CreateElement("p");
+		element_p.className="p_showRooms_elements";
+		element_p.id="p_showRooms_"+room.created;
+		element_p.style["max-width"]="300px";
+		//transform:rotate(90deg);
+		let usersOnline_str="Keine";
+		let usersOnline_num=0;
+		let users_num=0;
+		for(user of room.users){
+			usersOnline+=`<span title="${user.username}">${user.name}</span>${user.online?" (Online), ":", "}`
+			if(user.online){usersOnline_num+=1;}
+		}
+		element_p.innerHTML=`<img class="cursorPOINTER" id="img_${room.created}_infoRoom" alt="dropdown Menu" src="/files/img/sendByAFF.png" height="16"> 
+		<div class="cursorPOINTER noSelect" style="display:unset" onclick="GetId('img_${room.created}_infoRoom').onclick();">
+			<span style="font-weight:bold;" class="underLineHOVER">${room.name}</span>
+			<span>Alle: <code>${users_num}</code></span>, 
+			<span>Online: <code>${usersOnline_num}</code></span>
+			
+		</div>
+		
+		<div class="niceBorder" id="div_${room.created}_info" style="display:none;margin-top:10px;">
+			<p>Raum-Name: <span class=green>${room.name}</span></p>
+			<p>Passwort: <code ${room.password?"class=green>Ja":"class=orange>Nein"}</code></p>
+			<p>Raum Erstelt von: <span class="${room.userCreated=="$SERVER"?'green underLine" title="Diser RAUM wurde vom Server Erstelt"':"green"}">${room.userCreated=="$SERVER"?"Server":room.userCreated}</span></p>
+			<p>Benutzer: ${usersOnline_str}</p>
+			<p>
+				Benutzer:
+				<span>Online: <code>${usersOnline_num}</code></span>, 
+				<span>Alle: <code>${users_num}</code></span>
+			</p>
+			<p><button id="button_${room.created}_joinRoom"></button></p>
+		</div>`;
+		elements_rooms.push(element_p);
+		AppendChild(element_p,"div_showRooms",false);
+
+		let element=GetId("img_"+room.created+"_infoRoom");
+		element.findTag=room.created;
+		element.onclick=function(){
+			let div=GetId("div_"+this.findTag+"_info");
+			if(div.show==undefined){div.show=false;}
+			if(div.show==true){
+				div.show=false;
+				div.style.display="none";
+				this.style.transform="rotate(0deg)";
+			}else{
+				div.show=true;
+				div.style.display="block";
+				this.style.transform="rotate(80deg)";
+			}
+		}
+
+
+		element=GetId("button_"+room.created+"_joinRoom");
+		element.innerText="Join";
+		element.className="styledBTNMint";
+		element.findTag=room.created;
+		element.onclick=function(){
+			con.log(this.findTag);
+		}
+	}
+}
+function CreateRoom(result,state){
+	if(state==100){
+		let btn=result
+		if(btn.disabled){return}
+		if(btn.innerText=="Close"){
+			btn.innerText="Raum Erstellen"
+			GetId("div_createRoom").style.display="none";
+		}else if(btn.innerText=="Raum Erstellen"){
+			btn.innerText="Close";
+			GetId("div_createRoom").style.display="block";
+		}
+	}else if(state=="startDownload"){
+		let logDes="[CreateRoom][callApi]";
+		CleanLog(logDes,"searching Login Data...")
+		let chatLoginData=localStorage.getItem("chatLoginData");
+		if(chatLoginData==null){CleanLog(logDes,"localStorage.chatLoginData is 'null'!","[ERROR]");return(false)}
+		chatLoginData=JSON.parse(chatLoginData);
+		const form=result;
+		const [
+			room_name,
+			room_password_raw,
+			user_username,
+			user_name,
+			user_token,
+			user_deviceId,
+			user_isAccount
+		]=[
+			form.roomName.value,
+			form.roomPassword.value,
+			chatLoginData.username,
+			chatLoginData.name,
+			chatLoginData.token,
+			chatLoginData.deviceId,
+			chatLoginData.isAccount
+		];
+		let url="/server/chat/auth.api"
+		let args={
+			"url":"/server/chat/auth.api",
+			"encode":1,
+			"fn":CreateRoom,
+			"args":"receive"
+		};
+		url+=AddSearch("want","CreateRoom","?");
+		url+=AddSearch("username",user_username);
+		url+=AddSearch("token",user_token);
+		url+=AddSearch("deviceId",user_deviceId);
+		url+=AddSearch("roomName",room_name);
+		url+=AddSearch("roomPassword",room_password_raw);
+
+		args.url=url;
+		GetUrlStatus(args);
+	}
+	else if(state=="receive"){
+		const data=result;
+
+		if(data.status==200&&data.response.substr(0,2)=="OK"){
+			//alert("Raum Wurde Erfolgreich Erstelt!");
+			const length="OK\n".length-1;
+
+			let rooms=data.response.substr(length);
+			try{sessionStorage.setItem("chat_rooms",JSON.stringify(JSON.parse(rooms)))}
+			catch(e){
+				alert("Fehler Es konnten keine reume gefunden/instralisirt werden\n\nresponse: "+data.response);
+				return(-1);
+			}
+			display_rooms();
+			GetId("div_createRoom").style.display="none";
+			GetId("button_createRoom_showHide").innerText="Raum Erstellen";
+			return(200);
+		}
+		else if(data.status==200&&data.response=="room exists"){
+			alert("Raum konnte NICHT erstelt werden da der 'Raum-Name' schon vergeben ist!\n\nTipp: Probire einen anderen 'Raum-Name'.");
+			return("room exists")
+		}
+		else if(data.status==400){
+			alert("Es ist ein INTERNER FEHLER aufgetreten!\n\nFehlercode: 'server/chat/auth.api>400'")
+			return(400);
+		}
+		else if(data.status==404){
+			alert("Dein account konnte nicht gefunden werden!\n\nTipp: Probire dich erneut auf der startseite anzumelden und komme dan zurück.")
+			return(404);
+		}
+		else if(data.status==401){
+			alert("Deine account daten sind möglicher weise abgelaufen\n\nTipp: Probire auf die startseite zu gehen und dich erneut anzumelden.")
+			return(401);
+		}
+		else if(data.status==406){
+			alert("Du brauchst ein Account!\nProbire den 'Statdessen Anmelden' knopf andernfalz gehe auf die startseite und erstelle dir einen Account\n\nTipp: Auf der startseite ist oben rechts ein knopf register probir den mal.");
+			return(406);
+		}else{
+			alert("Es handelt sich um einen unbeckanten FEHLER!\n\nFehlercode: '"+data.status+"', response: '"+data.response+"'\n\nTipp: Benarichtige einen andmin.")
+			return(-1);
+		}
+	}
+}
+function CreateProgressbar(){
+	try{GetId("progressbar").remove();}catch(e){}
+	let element=CreateElement("progress");
+	element.id="progressbar";
+	element.className="unten";
+	AttrCSSSet(element,"width","100%")
+	AttrCSSSet(element,"max-width","100%")
+	AppendChild(element,doc.body);
+}
+function SendMSG(data,receive=false){
+	const form=GetId("form_sendMSG");
+	if(!receive){
+		if(form.allowed.value!="1"){return(false);}
+		form.allowed.value='0';
+
+		let url="/server/chat/auth.api";
+		const element=form["msg_"+form.use.value];
+		let msg=element.value;
+		con.log(msg);
+
+		let chatLoginData=localStorage.getItem("chatLoginData");
+		if(chatLoginData==null){if(confirm("Keine Anmeldedaten vorhanden!\n\nTipp: melde dich auch der '/chat' zeite an oder auf der startseite '/', dann solte es klappen!\n\n Möchten sie zur '/chat' seite?")){location.href="/Chat#login";location.reload();};return(false)}
+		else{chatLoginData=JSON.parse(chatLoginData);}
+
+		const roomName=chatLoginData.roomName;
+		const roomPassword_need=chatLoginData.roomPassword_need
+		const roomPassword=sessionStorage.getItem("chat_roomPassword");
+
+		if(!roomName){if(confirm("Achtung!! wir wissen nicht wo hin die narichten gehen sollen!\nWähle zuerst einen raum aus\n\nRaum jz wählen?")){location.href="/Chat#rooms";location.reload();};return(false)}
+		if(!roomPassword_need){roomPassword="";}
+		
+		url+=AddSearch("want","SendMSG","?");
+		url+=AddSearch("username",chatLoginData.username);
+		url+=AddSearch("token",chatLoginData.token);
+		url+=AddSearch("deviceId",chatLoginData.deviceId);
+		url+=AddSearch("roomName",roomName);
+		url+=AddSearch("roomPassword",roomPassword);
+
+		const args={
+			"url":url,
+			"encode":1,
+			"fn":SendMSG,
+			"args":true
+		};
+		GetUrlStatus(args);
+		con.log("Naricht wird gesendet...")
+
+	}else if(receive){
+		if(data.status==200){
+			alert(data.response)
+		}
+
+		else if(data.status==400){
+			alert("Es ist ein INTERNER FEHLER aufgetreten!\n\nFehlercode: 'server/chat/auth.api>400'")
+			return(400);
+		}
+		else if(data.status==404){
+			alert("Dein account konnte nicht gefunden werden!\n\nTipp: Probire dich erneut auf der startseite anzumelden und komme dan zurück.")
+			return(404);
+		}
+		else if(data.status==401){
+			alert("Deine account daten sind möglicher weise abgelaufen\n\nTipp: Probire auf die startseite zu gehen und dich erneut anzumelden.")
+			return(401);
+		}else{
+			alert("Es handelt sich um einen unbeckanten FEHLER!\n\nFehlercode: '"+data.status+"', response: '"+data.response+"'\n\nTipp: Benarichtige einen andmin.")
+			return(-1);
+		}
+	}
+}
+function changeMSGMode(want){
+	want=want.toLowerCase();
+	const form=GetId("form_sendMSG");
+
+	if(want=="toTextarea".toLowerCase()){
+		form.use.value='textarea';
+		form.msg_input.className='hidden';
+		form.img_newLine.className='hidden';
+
+		form.msg_textarea.className='flex';
+		AttrCSSSet(form,'align-items','center');
+
+		form.msg_textarea.focus();
+		form.msg_textarea.value=form.msg_input.value+'\n';
+		form.msg_textarea.rows=3;
+	}
+	else if(want=="toInput".toLowerCase()){
+		form.use.value='input';
+		form.msg_input.className='flex';
+		form.msg_input.value=form.msg_textarea.value.split("\n").join(" ");
+		form.img_newLine.className='<?=input.mobil?"":"hidden"?>';
+
+		form.msg_textarea.className='hidden';
+		AttrCSSSet(form,'align-items','unset');
+
+		form.msg_textarea.value="";
+		form.msg_textarea.rows=3;
+	}
+}
+
+CheckSearch();
+ReadLocalStorage();
+
+if(location.hash.substr(1).toLowerCase()=="rooms"){
+	GetId("div_login").style.display="none";
+	GetId("div_selectRoom").style.display="block";
+	GetId("div_chatHistory").style.display="none";
+}
+else if(location.hash.substr(1).toLowerCase()=="login"){
+	GetId("div_login").style.display="block";
+	GetId("div_selectRoom").style.display="none";
+	GetId("div_chatHistory").style.display="none";
+}
+else if(location.hash.substr(1).toLowerCase()=="chat"){
+	GetId("div_login").style.display="none";
+	GetId("div_selectRoom").style.display="none";
+	GetId("div_chatHistory").style.display="block";
+}
+if(localStorage.getItem("chat_rooms")!=null){localStorage.removeItem("chat_rooms")}
+//Check Room's
+//doc.body.innerHTML=JSON.stringify(JSON.parse(sessionStorage.getItem("chat_rooms")),null,4).split("\n").join("<br>")
+</script>
+</body>
+</html>
